@@ -4,7 +4,8 @@ library(jsonlite)
 
 # ---- Config ---------------------------------------------------------------
 LEAGUE_ID <- "1397988384693063680"
-WEEK      <- 1
+args <- commandArgs(trailingOnly = TRUE)
+WEEK <- if (length(args) >= 1) as.integer(args[1]) else 1
 PLAYERS_CACHE <- "players_cache.rds"  # 2026-09-15: avoid re-hitting /players/nfl every run
 
 # ---- Fetch helpers ----------------------------------------------------------
