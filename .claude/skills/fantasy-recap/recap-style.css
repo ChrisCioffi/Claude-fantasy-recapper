@@ -1,0 +1,159 @@
+/* Shared look for fantasy-recap Artifacts. Inline this whole block into the
+   <style> tag of every recap page so weekly/season recaps stay visually
+   consistent. Swap only the content (headline, matchups, stats, standings),
+   never the tokens or component rules, unless the user asks for a redesign. */
+
+:root {
+  --bg: #eef2e6;
+  --surface: #ffffff;
+  --surface-2: #e3ead9;
+  --ink: #162118;
+  --ink-soft: #4b5b4d;
+  --line: #cdd8c4;
+  --accent: #c97a0f;
+  --accent-ink: #4a3005;
+  --win: #2f7d4f;
+  --loss: #a83f3f;
+  --win-bg: #e3f0e6;
+  --loss-bg: #f5e6e1;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10160f;
+    --surface: #182018;
+    --surface-2: #1f2a1e;
+    --ink: #eef1e6;
+    --ink-soft: #b7c2ae;
+    --line: #33402f;
+    --accent: #f2b134;
+    --accent-ink: #241a02;
+    --win: #5fc78c;
+    --loss: #e2837c;
+    --win-bg: #1c2c21;
+    --loss-bg: #2c2020;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10160f;
+  --surface: #182018;
+  --surface-2: #1f2a1e;
+  --ink: #eef1e6;
+  --ink-soft: #b7c2ae;
+  --line: #33402f;
+  --accent: #f2b134;
+  --accent-ink: #241a02;
+  --win: #5fc78c;
+  --loss: #e2837c;
+  --win-bg: #1c2c21;
+  --loss-bg: #2c2020;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+  padding-inline: 20px;
+  padding-block: 32px;
+  display: flex;
+  justify-content: center;
+}
+
+main { width: 100%; max-width: 680px; }
+
+.eyebrow {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.eyebrow::before { content: ""; width: 26px; height: 2px; background: var(--accent); display: inline-block; }
+
+h1 {
+  font-family: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  font-weight: 800;
+  font-size: clamp(2.2rem, 7vw, 3.4rem);
+  line-height: 0.98;
+  margin: 10px 0 14px;
+  text-wrap: balance;
+}
+
+.dek {
+  font-style: italic;
+  font-size: 1.15rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  margin: 0 0 28px;
+  max-width: 58ch;
+}
+
+/* Scoreboard strip: one .matchup card per game, repeat as needed */
+.scoreboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-bottom: 34px; }
+.matchup { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; }
+.row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-block: 3px; }
+.row .team { font-size: 0.92rem; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 8px; min-width: 0; }
+.row .team span.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.04em; padding: 1px 6px; border-radius: 3px; flex-shrink: 0; }
+.badge.w { color: var(--win); background: var(--win-bg); }
+.badge.l { color: var(--loss); background: var(--loss-bg); }
+.badge.t { color: var(--accent); background: var(--surface-2); }
+.row .score { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 0.95rem; flex-shrink: 0; }
+.row.lost .score, .row.lost .team { color: var(--ink-soft); font-weight: 500; }
+.margin-note { font-size: 0.7rem; color: var(--ink-soft); border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; letter-spacing: 0.02em; }
+
+article { font-size: 1.06rem; line-height: 1.68; color: var(--ink); }
+article p { margin: 0 0 20px; max-width: 62ch; }
+article p:first-of-type::first-letter {
+  font-family: "Big Shoulders Display", sans-serif;
+  font-weight: 800;
+  font-size: 3.4em;
+  float: left;
+  line-height: 0.82;
+  padding-right: 8px;
+  padding-top: 3px;
+  color: var(--accent);
+}
+
+h2.section {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 36px 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--line);
+}
+
+/* By-the-numbers stat tiles, 2x2 grid (1 col on phones) */
+.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 30px; }
+@media (max-width: 480px) { .stats { grid-template-columns: 1fr; } }
+.stat-tile { background: var(--surface-2); border-radius: 6px; padding: 16px 18px; }
+.stat-tile .label { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
+.stat-tile .value { font-family: "Big Shoulders Display", sans-serif; font-weight: 800; font-size: 1.9rem; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); }
+.stat-tile .value .accent { color: var(--accent); }
+.stat-tile .sub { font-size: 0.82rem; color: var(--ink-soft); margin-top: 6px; font-family: "Source Serif 4", serif; }
+
+/* Standings table — only present on multi-week/season recaps */
+.standings { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-bottom: 30px; }
+.standings th { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); text-align: left; padding: 6px 10px; border-bottom: 2px solid var(--line); }
+.standings td { padding: 8px 10px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.standings tr:first-child td { font-weight: 700; }
+.standings td.team { font-family: "Source Serif 4", serif; font-weight: 600; }
+
+footer {
+  margin-top: 40px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+}
