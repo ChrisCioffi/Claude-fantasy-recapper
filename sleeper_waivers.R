@@ -8,7 +8,7 @@ library(jsonlite)
 #   team      - optional: the user's team, matched against roster_id, team
 #               name, or owner display name (case-insensitive substring).
 #               Omit to evaluate every team in the league.
-# Writes league_rosters.csv and waiver_pool.csv (full tables) next to the
+# Writes league_rosters_<league_id>.csv and waiver_pool_<league_id>.csv (full tables) next to the
 # script; stdout holds the summaries the waiver-wire skill reads first.
 DEFAULT_LEAGUE_ID <- "1397988384693063680"
 PLAYERS_CACHE <- "players_cache.rds"  # shared with sleeper_matchups.R
@@ -248,8 +248,10 @@ waiver_pool <- player_meta |>
          games, season_pts, ppg, recent_ppg, last_wk, trend_adds_48h, search_rank, player_id) |>
   arrange(position, desc(season_pts), search_rank)
 
-write.csv(league_rosters, "league_rosters.csv", row.names = FALSE)
-write.csv(waiver_pool, "waiver_pool.csv", row.names = FALSE)
+ROSTERS_CSV <- sprintf("league_rosters_%s.csv", LEAGUE_ID)
+POOL_CSV    <- sprintf("waiver_pool_%s.csv", LEAGUE_ID)
+write.csv(league_rosters, ROSTERS_CSV, row.names = FALSE)
+write.csv(waiver_pool, POOL_CSV, row.names = FALSE)
 
 # ---- Which team(s) to evaluate ---------------------------------------------------
 focus <- teams
@@ -300,8 +302,8 @@ cat("Starting slots:", paste(names(table(starting_slots)), table(starting_slots)
                              sep = "x", collapse = ", "), "\n")
 
 cat("\n========================================\n")
-cat(sprintf("FREE AGENT POOL — top %d per position by season points (full list: waiver_pool.csv)\n",
-            POOL_PER_POSITION))
+cat(sprintf("FREE AGENT POOL — top %d per position by season points (full list: %s)\n",
+            POOL_PER_POSITION, POOL_CSV))
 cat("========================================\n")
 for (pos in fantasy_positions) {
   cat(sprintf("\n-- %s --\n", pos))

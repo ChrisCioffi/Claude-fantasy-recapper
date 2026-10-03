@@ -53,9 +53,10 @@ Omit `team` to get every roster. The script prints:
   rostered (and by whom), or unsigned (no NFL team, so not worth a claim
   yet).
 
-It also writes the full tables to `league_rosters.csv` and
-`waiver_pool.csv`. Search `waiver_pool.csv` when a ranked player isn't in
-the printed top-N. The pool excludes everyone on a roster, so anyone in it
+It also writes the full tables to `league_rosters_<league_id>.csv` and
+`waiver_pool_<league_id>.csv`. Search the pool CSV when a ranked player
+isn't in the printed top-N, and always read the files for the league
+you're evaluating. The pool excludes everyone on a roster, so anyone in it
 is claimable. Player metadata is shared with the recap skill's 12-hour
 cache (`players_cache.rds`).
 
