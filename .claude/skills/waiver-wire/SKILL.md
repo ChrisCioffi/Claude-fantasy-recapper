@@ -36,8 +36,8 @@ Rscript sleeper_waivers.R <league_id> [team]
 Omit `team` to get every roster. The script prints:
 
 - **LEAGUE SETTINGS**: scoring format (PPR/half/standard, TE premium),
-  starting lineup slots, bench/IR size, and waiver type (FAAB budget,
-  rolling, or reverse standings).
+  starting lineup slots, bench/IR size, which injury statuses can go on
+  IR, and waiver type (FAAB budget, rolling, or reverse standings).
 - **TEAMS**: record, points for, waiver position, FAAB remaining.
 - **ROSTER**: one block per evaluated team. Every player has a slot
   (START/BENCH/IR/TAXI), injury status, and season-to-date production
@@ -93,6 +93,9 @@ For each evaluated team:
 2. **Pick drop candidates.** Choose the lowest-ranked bench players. Never
    suggest dropping an IR/taxi player to "make room" unless roster rules
    require it. Be careful dropping a stud who's merely hurt short-term.
+   Before suggesting any drop, check whether an injured player could
+   move to an open IR slot instead (see "IR-eligible statuses"). That's a
+   free roster spot.
 3. **Match pickups to holes.** A free agent is a recommended add when his
    consensus rank beats the drop candidate's at a position the team can
    actually start him. Prioritize by the size of that gap, then by need.

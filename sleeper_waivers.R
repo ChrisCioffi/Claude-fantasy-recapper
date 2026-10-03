@@ -77,6 +77,11 @@ cat(sprintf("Bench: %d | IR: %d | Taxi: %d\n",
             sum(roster_slots == "BN"),
             league$settings$reserve_slots %||% 0,
             league$settings$taxi_slots %||% 0))
+ir_extra <- c(Out = "reserve_allow_out", Doubtful = "reserve_allow_doubtful",
+              Suspended = "reserve_allow_sus", "NA" = "reserve_allow_na",
+              COV = "reserve_allow_cov", DNR = "reserve_allow_dnr")
+ir_allowed <- names(ir_extra)[vapply(ir_extra, function(k) isTRUE((league$settings[[k]] %||% 0) == 1), logical(1))]
+cat("IR-eligible statuses:", paste(c("IR", ir_allowed), collapse = ", "), "\n")
 cat("Waivers:", waiver_label, "\n")
 
 # ---- Rosters + users ----------------------------------------------------------
