@@ -157,25 +157,31 @@ for the top available players. Use `icon: "clipboard"` and a title like
 Use this when the user asks for odds, or to settle a close start/sit call.
 
 1. Write this week's projections to a CSV **in your scratchpad, not the
-   repo** (they're third-party data). Columns: `player_name,position,proj`.
-   Use standard-PPR points; the script adjusts for half-PPR and TE
-   premiums itself. With more than one source, average them. If a source
-   gives ratings or ranks instead of points, convert them first. Fit the
-   ratings against a points source across players both sources cover,
-   position by position. Include every starter in the league, both teams'
-   K and DEF if you have them.
+   repo** (they're third-party data). Columns: `player_name,position,proj`,
+   plus optional `player_id` (skips name matching) and `active` (1 = ignore
+   an Out tag for a player the news says is returning). Use standard-PPR
+   points; the script adjusts for half-PPR and TE premiums itself. With
+   more than one source, average them. When sources give only ranks or
+   ratings, convert them to points. Fit a points source's projections
+   against its positional ranks (`points = a + b*ln(rank)` fits ESPN's
+   tables to within about 1 point), then apply the fit to the consensus
+   rank. Give every rostered starter a row (unranked ones get a floor just
+   below the last ranked player), and leave bye-week players out.
 2. Run:
    ```
-   Rscript sleeper_winprob.R <league_id> <week> <team> <projections.csv> ["Out Player=In Player;..."]
+   Rscript sleeper_winprob.R <league_id> <week> <team> <projections.csv> ["label::Out=In;Out=In|label::..."]
    ```
-   It simulates every team's lineup 20,000 times. The swings come from last
-   season's real weekly results at each position, scored with this league's
-   settings and cached in `stats_cache_<season>.rds`. Points already scored
-   this week count as banked. Out/IR/Doubtful starters score 0. Players with
-   no projection score 0 and are flagged (likely on bye); K/DEF fall back to
-   their season average. It prints both lineups, `P(win head-to-head)`, and
-   `P(beat league median)` in leagues with a median game. The optional swaps
-   argument evaluates an alternative lineup side by side.
+   It simulates 20,000 weeks. The swings come from last season's real
+   weekly results at each position, scored with this league's settings
+   and cached in `stats_cache_<season>.rds`. Points already scored count
+   as banked; Out/IR/Doubtful players score 0 unless marked `active`.
+   Every other team starts its best projected lineup and fills a bye or
+   injury hole with the best free agent. Your team is priced three ways,
+   all on the same random draws: as currently set, as its best lineup
+   from the roster, and under each scenario. Each scenario starts from
+   the best lineup, and the player swapped in can be a free agent, to
+   price a pickup. The output table shows head-to-head and median-game
+   odds for each scenario, with the change versus the best lineup.
 3. Report odds as rough numbers ("about 55%"), not false precision. The
    model treats players as independent, which understates swings when
    teammates (QB + his WR) boom or bust together. Say so when it matters.
