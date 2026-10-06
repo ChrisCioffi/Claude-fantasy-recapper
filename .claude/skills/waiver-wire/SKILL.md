@@ -1,6 +1,6 @@
 ---
 name: waiver-wire
-description: Evaluate a Sleeper fantasy football league's rosters against player rankings from user-provided websites (FantasyPros, ESPN, Yahoo, a podcast's rankings page, etc.) and recommend the best waiver-wire / free-agent pickups, each paired with a drop and, in FAAB leagues, a bid. Use when the user asks who to pick up, who's on the waiver wire, who to add/drop, how much FAAB to bid, or which free agents are worth claiming for a Sleeper league — for their own team or for every team in the league.
+description: Evaluate a Sleeper fantasy football league's rosters against player rankings from user-provided websites (FantasyPros, ESPN, Yahoo, a podcast's rankings page, etc.) and recommend the best waiver-wire / free-agent pickups, each paired with a drop and, in FAAB leagues, a bid. Use when the user asks who to pick up, who's on the waiver wire, who to add/drop, how much FAAB to bid, or which free agents are worth claiming for a Sleeper league — for their own team or for every team in the league. Also estimates weekly win odds, compares lineup choices, and keeps a graded record of every call ("how did your predictions do?").
 ---
 
 # Waiver Wire Advisor
@@ -9,6 +9,14 @@ Cross-reference what's actually available in the league with rankings the
 user trusts, then recommend specific add/drop moves that make rosters
 better. Pair every recommendation with a reason grounded in the rankings
 and the league data.
+
+## 0. Grade last week first
+
+If `predictions/log.csv` exists, run `Rscript grade_predictions.R` before
+anything else. It fills in results for every logged call from completed
+weeks. Lead with a two-line recap: how the win odds did and the net
+points from the calls. Use its "By source" lines to weigh the sources this
+week. If one source has been right more often on close calls, lean on it.
 
 ## 1. Gather inputs
 
@@ -97,6 +105,9 @@ For each evaluated team:
    Before suggesting any drop, check whether an injured player could
    move to an open IR slot instead (see "IR-eligible statuses"). That's a
    free roster spot.
+   Think twice before dropping a backup RB on the same NFL team as one of
+   the team's starters, even when he ranks lowest. He's the one who
+   benefits if the starter gets hurt or loses work.
 3. **Match pickups to holes.** A free agent is a recommended add when his
    consensus rank beats the drop candidate's at a position the team can
    actually start him. Prioritize by the size of that gap, then by need.
@@ -140,6 +151,60 @@ matches the weekly recaps: `.eyebrow` for "Sleeper League · Week N Waivers",
 `h1`/`.dek` for the headline, one section per team, and a `.stats` grid
 for the top available players. Use `icon: "clipboard"` and a title like
 "Week 5 Waiver Wire".
+
+## 6. Win odds and lineup comparisons
+
+Use this when the user asks for odds, or to settle a close start/sit call.
+
+1. Write this week's projections to a CSV **in your scratchpad, not the
+   repo** (they're third-party data). Columns: `player_name,position,proj`.
+   Use standard-PPR points; the script adjusts for half-PPR and TE
+   premiums itself. With more than one source, average them. If a source
+   gives ratings or ranks instead of points, convert them first. Fit the
+   ratings against a points source across players both sources cover,
+   position by position. Include every starter in the league, both teams'
+   K and DEF if you have them.
+2. Run:
+   ```
+   Rscript sleeper_winprob.R <league_id> <week> <team> <projections.csv> ["Out Player=In Player;..."]
+   ```
+   It simulates every team's lineup 20,000 times. The swings come from last
+   season's real weekly results at each position, scored with this league's
+   settings and cached in `stats_cache_<season>.rds`. Points already scored
+   this week count as banked. Out/IR/Doubtful starters score 0. Players with
+   no projection score 0 and are flagged (likely on bye); K/DEF fall back to
+   their season average. It prints both lineups, `P(win head-to-head)`, and
+   `P(beat league median)` in leagues with a median game. The optional swaps
+   argument evaluates an alternative lineup side by side.
+3. Report odds as rough numbers ("about 55%"), not false precision. The
+   model treats players as independent, which understates swings when
+   teammates (QB + his WR) boom or bust together. Say so when it matters.
+
+## 7. Log every call
+
+After you give recommendations, record each one so it can be graded later:
+
+```
+Rscript log_prediction.R league=<id> week=<n> team=<team> kind=<kind> pick="Player" alt="Player" pred=<n> alt_pred=<n> sources="ESPN,CBS"
+```
+
+- `kind=h2h` / `kind=median`: `pred` is the win probability you reported.
+- `kind=start`: started `pick` over `alt` (same lineup slot).
+- `kind=add`: added `pick`; `alt` is the player dropped, or the free agent
+  passed over. Log both when both matter.
+- `kind=trade`: received `pick`; `alt` is the player he'd replace in the
+  lineup.
+- `sources`: only the sources that backed the call. Note in `note=` when a
+  source disagreed (e.g. `note="Richard preferred Stevenson"`).
+- Leave `followed` out. The grader fills it in from that week's actual
+  lineup and roster.
+
+The log lives at `predictions/log.csv` and is committed to the repo. That's
+how the record survives between sessions, so commit and push it after
+logging. `grade_predictions.R` scores `start`/`add`/`trade` calls by the
+points the pick scored minus the alternative's. An `add` is graded on raw
+points even if both players sat on the bench, so it measures pickup value,
+not lineup impact.
 
 ## Constraints
 

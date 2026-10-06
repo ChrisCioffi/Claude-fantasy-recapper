@@ -1,3 +1,4 @@
 players_cache.rds
 league_rosters_*.csv
 waiver_pool_*.csv
+stats_cache_*.rds
