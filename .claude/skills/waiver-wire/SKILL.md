@@ -80,6 +80,17 @@ scoring format and horizon (weekly vs ROS) if the page states it.
   "Marquise Brown"), and team defenses ("Chiefs D/ST", "KC DST", and
   "Kansas City Chiefs" are all the same DEF). Use position + NFL team to
   break ties between same-name players.
+- **Waiver columns are ranked lists.** Within each position, a waiver
+  column lists players in priority order: the first one named is the
+  writer's top add, the last is the lowest (e.g. in a CBS column, the first
+  TE listed outranks the last). Record each player's place in every
+  column, not just that he was mentioned, and quote the order when you
+  cite it ("his No. 3 TE add, behind Gesicki and Higbee"). Keep this
+  column priority separate from the weekly rankings. Columns lean toward
+  rest-of-season value and lightly rostered players; weekly rankings
+  decide this week's starts. When they disagree, show both and price the
+  column favorite with the win-odds script before recommending against
+  it.
 - **Multiple sources → consensus.** Average each player's positional rank
   across the sources that rank him. Note when sources disagree sharply.
   That's often a useful point for the write-up.
