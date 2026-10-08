@@ -119,6 +119,24 @@ scoring format and horizon (weekly vs ROS) if the page states it.
   Note any condition attached to the tier ("if Chase and Higgins are
   out"). That tier only counts if the condition comes true, so say so,
   and plan the move for that case instead of baking it in.
+- **Consistency ratings (reliability).** ESPN's consistency chart gives
+  each player's `Start%` (share of scheduled games with a startable
+  score), `CR` (weekly standard deviation ÷ points per game; lower is
+  steadier), and counts of `Star` and `Stiff` (bust) weeks across several
+  seasons. Lean on `Start%` and the stiff rate (Stiff ÷ games played).
+  Judge `CR` only against players who score about the same: low scorers
+  have high CRs by construction. The user wants reliable players
+  favored, so:
+  - *Start/sit:* when two options are close (about a point, or 1–2% in
+    win odds), start the one with the higher `Start%` and fewer stiffs.
+  - *Long-term value:* for pickups and drops, a multi-season record of
+    startable weeks is evidence of a lasting role. Note that the history
+    can be from an old team or role. Weigh this season's trend when the
+    two disagree.
+  - A player missing from the chart didn't meet its usage minimums, so
+    he has no track record yet. Say so; it isn't a mark against a rookie
+    or someone newly promoted.
+  - Feed it to the win-odds script with the `vol` column (section 6).
 - **Multiple sources → consensus.** Average each player's positional rank
   across the sources that rank him. Note when sources disagree sharply.
   That's often a useful point for the write-up.
@@ -217,6 +235,13 @@ Use this when the user asks for odds, or to settle a close start/sit call.
    tables to within about 1 point), then apply the fit to the consensus
    rank. Give every rostered starter a row (unranked ones get a floor just
    below the last ranked player), and leave bye-week players out.
+   With consistency ratings, add a `vol` column: the multiplier on the
+   player's weekly swing. Fit `CR = a + b*ln(FPTS/G)` per position across
+   the chart, divide each player's CR by his expected CR, and shrink the
+   ratio toward 1 by sample size (`1 + (ratio − 1) * games / (games + 8)`,
+   clamped to 0.7–1.4). Leave it at 1 for players not in the chart. A
+   steady player helps most when you're favored; a boom-or-bust one helps
+   an underdog. The script prices both.
 2. Run:
    ```
    Rscript sleeper_winprob.R <league_id> <week> <team> <projections.csv> ["label::Out=In;Out=In|label::..."]

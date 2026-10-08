@@ -5,7 +5,10 @@ source("sleeper_common.R")
 #   projections.csv - columns player_name, position, proj (standard PPR points;
 #                     blend your sources before writing it). Optional columns:
 #                     player_id (skips name matching) and active (1 = ignore an
-#                     Out/Doubtful tag, e.g. a player cleared to return).
+#                     Out/Doubtful tag, e.g. a player cleared to return) and
+#                     vol (multiplier on the player's weekly swing: below 1 for
+#                     a player steadier than most at his scoring level, above 1
+#                     for a boom-or-bust one; default 1).
 #                     DEF rows can use the team abbreviation or nickname.
 #   scenarios       - optional lineup alternatives for <team>, separated by "|".
 #                     Each is "label::Out Player=In Player;Out=In" (bench the
@@ -92,6 +95,8 @@ unmatched <- proj$player_name[is.na(proj$player_id)]
 if (length(unmatched)) cat("Unmatched projection rows (ignored):", paste(unmatched, collapse = ", "), "\n")
 proj <- proj[!is.na(proj$player_id), ]
 if (!"active" %in% names(proj)) proj$active <- 0
+if (!"vol" %in% names(proj)) proj$vol <- 1
+proj$vol[is.na(proj$vol)] <- 1
 rec_value <- scoring[["rec"]] %||% 0
 te_bonus  <- if ("bonus_rec_te" %in% names(scoring)) scoring[["bonus_rec_te"]] else 0
 
@@ -118,7 +123,8 @@ player_spec <- function(pid) {
     # Projections are standard PPR: adjust for this league's reception scoring
     if (nrow(sa) && pos != "DEF") mu <- mu + (rec_value - 1) * sa$rec_pg +
         (if (pos == "TE") te_bonus * sa$rec_pg else 0)
-    sp <- list(name = name, pos = pos, src = if (forced_active) "proj (cleared to play)" else "proj", mu = mu)
+    sp <- list(name = name, pos = pos, src = if (forced_active) "proj (cleared to play)" else "proj", mu = mu,
+               vol = pr$vol[1])
   } else if (pos %in% c("K", "DEF")) {
     # Rankings sources often skip kickers/defenses; their season average is a fair stand-in
     sp <- list(name = name, pos = pos, src = "season avg", mu = if (nrow(sa)) sa$ppg else 0)
@@ -127,7 +133,7 @@ player_spec <- function(pid) {
     sp <- list(name = name, pos = pos, src = "NO PROJECTION - bye/unlisted?", mu = 0)
   }
   sp$draws <- if (sp$src %in% c("played", "out") || sp$mu == 0) rep(sp$mu, N_SIMS) else
-    pmax(sp$mu + sample(swing_pool(pos, sp$mu), N_SIMS, replace = TRUE), -5)
+    pmax(sp$mu + (sp$vol %||% 1) * sample(swing_pool(pos, sp$mu), N_SIMS, replace = TRUE), -5)
   spec_cache[[pid]] <- sp
   sp
 }
