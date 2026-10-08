@@ -84,9 +84,11 @@ resolve_roster <- function(league_id, query) {
   })) |>
     mutate(team_label = coalesce(team_name, display_name, paste("Roster", roster_id)))
   if (is.na(query) || !nzchar(query)) return(teams)
+  # An exact roster ID wins, so "4" doesn't also match a team named "40% Physical"
+  hit <- teams |> filter(as.character(roster_id) == query)
+  if (nrow(hit) == 1) return(hit)
   q <- tolower(query)
-  hit <- teams |> filter(as.character(roster_id) == query |
-                           grepl(q, tolower(coalesce(team_name, "")), fixed = TRUE) |
+  hit <- teams |> filter(grepl(q, tolower(coalesce(team_name, "")), fixed = TRUE) |
                            grepl(q, tolower(coalesce(display_name, "")), fixed = TRUE))
   if (nrow(hit) != 1) stop(sprintf("Team '%s' matched %d teams in league %s", query, nrow(hit), league_id))
   hit

@@ -91,6 +91,18 @@ scoring format and horizon (weekly vs ROS) if the page states it.
   decide this week's starts. When they disagree, show both and price the
   column favorite with the win-odds script before recommending against
   it.
+- **Start/sit and matchup articles.** Read the numbers on each player card
+  before using them. On CBS's Start 'Em & Sit 'Em cards, `PROJ PTS` is
+  SportsLine's projection, but `RNK` is the writer's own rank (it tracks
+  his text, e.g. "a low-end starter" = TE10). Don't count `RNK` again on
+  top of the CBS rankings. Average `PROJ PTS` in as its own projection,
+  after removing its average offset from yours at each position. In
+  ESPN's matchup tables, `Opp.` is the team that defense faces, so a
+  player on team T reads the row whose `Opp.` is T or @T (1 = toughest,
+  32 = easiest). The writer says matchups are already part of the
+  rankings, so use them as a tiebreaker on close calls, not as a points
+  adjustment. When an article says a player is "expected to be out," set
+  his projection to 0, whatever Sleeper's tag says.
 - **Multiple sources → consensus.** Average each player's positional rank
   across the sources that rank him. Note when sources disagree sharply.
   That's often a useful point for the write-up.
@@ -215,6 +227,9 @@ Rscript log_prediction.R league=<id> week=<n> team=<team> kind=<kind> pick="Play
   source disagreed (e.g. `note="Richard preferred Stevenson"`).
 - Leave `followed` out. The grader fills it in from that week's actual
   lineup and roster.
+- If new information changes a call later in the week, don't delete the
+  old row. Start its `note` with `SUPERSEDED` and say why, then log the
+  new call. The grader skips superseded rows.
 
 The log lives at `predictions/log.csv` and is committed to the repo. That's
 how the record survives between sessions, so commit and push it after

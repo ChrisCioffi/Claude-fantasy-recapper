@@ -23,7 +23,9 @@ is_final <- function(season, week) {
 cache <- new.env()
 cached <- function(key, f) { if (is.null(cache[[key]])) cache[[key]] <- f(); cache[[key]] }
 
-todo <- which(log$graded_at == "" & mapply(is_final, log$season, log$week))
+# A call replaced later in the week (note starts "SUPERSEDED") is kept for the record but not graded
+superseded <- startsWith(log$note, "SUPERSEDED")
+todo <- which(log$graded_at == "" & !superseded & mapply(is_final, log$season, log$week))
 for (i in todo) {
   r <- log[i, ]
   scoring <- cached(paste0("sc", r$league_id),
@@ -66,7 +68,7 @@ for (i in todo) {
 write.csv(log, LOG_FILE, row.names = FALSE)
 cat(sprintf("Graded %d new prediction(s).\n", length(todo)))
 
-g <- log[log$graded_at != "", ]
+g <- log[log$graded_at != "" & !superseded, ]
 if (!nrow(g)) quit(status = 0)
 g$week <- as.integer(g$week)
 if (is.na(REPORT_WEEK)) REPORT_WEEK <- max(g$week)
