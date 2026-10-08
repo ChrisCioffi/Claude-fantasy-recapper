@@ -103,6 +103,22 @@ scoring format and horizon (weekly vs ROS) if the page states it.
   rankings, so use them as a tiebreaker on close calls, not as a points
   adjustment. When an article says a player is "expected to be out," set
   his projection to 0, whatever Sleeper's tag says.
+- **Read the writers' words, not just the numbers.** For every candidate,
+  in every start/sit piece, waiver column, and rankings blurb, record
+  the tier phrase the writer uses and quote it in the report. Rough
+  order, strongest first:
+  - "must-start," "start in all leagues," "top-5/top-10 at his position"
+  - "high-end flex," "low-end starter," "starter in three-receiver leagues"
+  - "flex option in the majority of leagues"
+  - "low-end starter in deeper leagues," "borderline starter," "flier"
+  - "deep stash," "worth a stash"
+
+  When a writer's tier is higher than the player's numeric rank (called a
+  must-start but ranked 30th), start him from the tier. Treat it as at
+  least a tiebreaker, and move his projection toward that tier's range.
+  Note any condition attached to the tier ("if Chase and Higgins are
+  out"). That tier only counts if the condition comes true, so say so,
+  and plan the move for that case instead of baking it in.
 - **Multiple sources → consensus.** Average each player's positional rank
   across the sources that rank him. Note when sources disagree sharply.
   That's often a useful point for the write-up.
@@ -137,6 +153,17 @@ For each evaluated team:
    Use production (`ppg`, `recent_ppg`), `depth_order`, and
    `trend_adds_48h` as supporting evidence, not as the main signal. The
    user's rankings are the main signal.
+   **Prefer long-term value.** A pickup takes a roster spot for weeks, so
+   when two adds are close this week (within about a point of
+   projection, or 1–2% in win odds), take the one with a steady role.
+   Steady-role language: "preferred No. 2 receiver," "six targets in
+   every game," or a lead-back job. Injury-contingent language: "if X is
+   out." That player's value disappears when the starter returns. Take
+   the short-term player only when his edge this week is large, or when
+   the long-term player is likely to still be there next week. In the
+   report, say which kind of value each add is ("role" vs "fill-in
+   while X is hurt"). Weigh the same way when choosing drops: keep the
+   player with the role.
 4. **Streamers.** For single-slot positions (QB, TE, K, DEF), only
    recommend a weekly streamer when it's a clear upgrade in this week's
    rankings over the current starter.
