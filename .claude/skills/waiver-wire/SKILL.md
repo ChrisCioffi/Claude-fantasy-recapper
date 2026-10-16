@@ -255,11 +255,19 @@ Use this when the user asks for odds, or to settle a close start/sit call.
    all on the same random draws: as currently set, as its best lineup
    from the roster, and under each scenario. Each scenario starts from
    the best lineup, and the player swapped in can be a free agent, to
-   price a pickup. The output table shows head-to-head and median-game
+   price a pickup. Use `empty=Player` to price filling an open slot (a DEF
+   or K slot left empty after a drop). The output table shows head-to-head and median-game
    odds for each scenario, with the change versus the best lineup.
 3. Report odds as rough numbers ("about 55%"), not false precision. The
    model treats players as independent, which understates swings when
    teammates (QB + his WR) boom or bust together. Say so when it matters.
+
+- **Pending waiver claims are private.** Sleeper's public API only shows
+  claims after they process (`complete` or `failed`, with the bid). It
+  can't show what other teams have claimed. After each run, read the
+  failed claims too: they show who else wanted a player and what they
+  bid. A claim also fails when the roster has no open spot and no drop
+  is attached, so pair every claim with a drop when the roster is full.
 
 ## 7. Log every call
 

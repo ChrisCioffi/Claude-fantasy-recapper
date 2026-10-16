@@ -14,6 +14,7 @@ source("sleeper_common.R")
 #                     Each is "label::Out Player=In Player;Out=In" (bench the
 #                     left player, start the right one; the right one can be a
 #                     free agent, to price a pickup). Label is optional.
+#                     Use "empty=Player" to fill an open lineup slot.
 # Simulates every team's starting lineup: each starter's projection plus a weekly
 # swing drawn from last season's real results at that position (scored with this
 # league's settings). Players who already played count as banked points. Other
@@ -212,9 +213,20 @@ cat("\n"); print_lineup(sprintf("%s, best lineup from current roster", label(me$
 apply_swaps <- function(starters, swaps) {
   for (sw in strsplit(swaps, ";", fixed = TRUE)[[1]]) {
     pair <- trimws(strsplit(sw, "=", fixed = TRUE)[[1]])
-    out_id <- resolve_player(pair[1], ptab); in_id <- resolve_player(pair[2], ptab)
-    if (is.na(out_id) || !out_id %in% starters) stop(sprintf("%s is not in the lineup being changed", pair[1]))
+    in_id <- resolve_player(pair[2], ptab)
     if (is.na(in_id)) stop(sprintf("Could not find %s", pair[2]))
+    # "empty=Player" fills the first open slot (e.g. a DEF slot left empty after a drop)
+    if (tolower(pair[1]) == "empty") {
+      open <- which(is.na(starters) | starters == "0")
+      if (!length(open)) stop("No empty slot in the lineup being changed")
+      starters[open[1]] <- in_id
+      next
+    }
+    # Match the benched player among the starters first, so a shared name ("DeVonta Smith") can't pick the wrong one
+    live <- starters[!is.na(starters) & starters != "0"]
+    hit <- live[norm_name(ptab$player_name[match(live, ptab$player_id)]) == norm_name(pair[1])]
+    out_id <- if (length(hit)) hit[1] else resolve_player(pair[1], ptab)
+    if (is.na(out_id) || !out_id %in% starters) stop(sprintf("%s is not in the lineup being changed", pair[1]))
     starters[starters == out_id] <- in_id
   }
   starters
