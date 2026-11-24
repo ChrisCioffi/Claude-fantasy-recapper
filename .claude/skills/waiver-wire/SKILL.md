@@ -298,6 +298,40 @@ points the pick scored minus the alternative's. An `add` is graded on raw
 points even if both players sat on the bench, so it measures pickup value,
 not lineup impact.
 
+## 8. Daily sweep (automated)
+
+A scheduled routine runs this every morning. Run the same steps when asked
+for a "sweep" or "daily check":
+
+1. `Rscript grade_predictions.R`, then `Rscript sleeper_waivers.R <id>` for
+   each league (no team argument, so every roster and the full pool are
+   written).
+2. `python3 fetch_sources.py --out ~/fantasy_sources`. This fetches CBS's
+   weekly PPR rankings (flex and QB pages), every linked CBS fantasy
+   football article, ESPN fantasy articles from ESPN's news index, and
+   Karabell's superflex list (ESPN article 49803708, reused weekly). ESPN
+   text comes from content.core.api.espn.com, because www.espn.com refuses
+   automated requests. The Athletic isn't fetched (paywall). Articles stay
+   outside the repo.
+3. `python3 daily_sweep.py --sources ~/fantasy_sources --week <N>
+   <league_id>:<team> ...`. It writes `proj_week<N>.csv`: CBS and ESPN
+   positional ranks averaged and turned into points with the ln(rank) fit,
+   then averaged with Sleeper's projection. A ranking list from another
+   week is ignored and noted. It prints lineup holes, bench players ranked
+   above a starter at their position, free agents ranked above your
+   weakest player, and **flags**: any benched or available player that a
+   current-week article calls a must-start or lineup lock, or a bust,
+   with the quote.
+4. Price the leads with `sleeper_winprob.R` using `proj_week<N>.csv`, read
+   the flagged and new articles for context, and recommend by rank: the
+   highest-ranked available player wins unless injury news or a
+   tier quote says otherwise.
+5. Say when each league's next waiver run is (from `daily_waivers_hour` in
+   the league settings and the timestamps of recent claims), so claims go
+   in on time.
+6. Log only calls not already in the log for that week (same kind, pick
+   and alt), then commit and push.
+
 ## Constraints
 
 - Every rank you cite must come from a source the user provided, and every
