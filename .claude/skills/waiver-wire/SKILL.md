@@ -331,6 +331,14 @@ for a "sweep" or "daily check":
    in on time.
 6. Log only calls not already in the log for that week (same kind, pick
    and alt), then commit and push.
+7. Publish the report page. Write `report.json` in the shape documented at
+   the top of `render_sweep.py`. Every action carries the links (and a
+   short exact quote where one exists) to the articles or ranking pages
+   that justify it. Then run `python3 render_sweep.py report.json >
+   daily-lineup-desk.html` and publish it to the same artifact every day,
+   so the link never changes: https://claude.ai/artifact/VfkWRtEkCnQ2timfn49jaQ
+   (Artifact tool: `read` it first, then publish with `url`). The push
+   notification is one or two plain sentences plus that link.
 
 ## Constraints
 

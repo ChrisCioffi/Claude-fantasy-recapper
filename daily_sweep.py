@@ -139,7 +139,7 @@ def main():
                     if tier:
                         break
                 if tier:
-                    hits.append(dict(tier=tier, quote=s, source=m["source"], title=m["title"], new=m["is_new"]))
+                    hits.append(dict(tier=tier, quote=s, source=m["source"], title=m["title"], url=m["url"], new=m["is_new"]))
         order = {t: i for i, (t, _) in enumerate(TIERS)}
         return sorted(hits, key=lambda h: (not h["new"], order[h["tier"]]))
 

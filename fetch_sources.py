@@ -82,6 +82,10 @@ def cbs_rankings(page):
                          pos=pos.group(1) if pos else None, pos_rank=int(pos.group(2)) if pos else None,
                          opp=opp.group(1).strip() if opp else None,
                          experts=[None if e.strip("-") == "" else int(e) for e in experts if re.fullmatch(r"\d+|-+", e)]))
+    if page.split("/")[1].upper() in ("QB", "RB", "WR", "TE", "K", "DST"):   # position pages: the rank is the positional rank
+        p = page.split("/")[1].upper()
+        for r in rows:
+            r["pos"], r["pos_rank"] = r["pos"] or p, r["pos_rank"] or r["rank"]
     return dict(week=int(week.group(1)) if week else None, rows=rows), code
 
 
