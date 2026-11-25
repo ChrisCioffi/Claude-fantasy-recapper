@@ -6,13 +6,16 @@ Usage: python3 fetch_sources.py [--out DIR] [--hours N]
 Writes to DIR (default ~/fantasy_sources; keep it out of the repo, the
 articles are third-party content):
   cbs_rankings.json     CBS weekly PPR rankings: flex (RB/WR/TE) and QB pages
+  espn_rankings.json    ESPN analysts' weekly PPR ranks (QB/RB/WR/TE): each analyst's
+                        positional rank averaged, then re-ranked within the position
   espn_superflex.json   Karabell's weekly superflex list (ESPN), if found
   articles/*.txt        plain text of each CBS/ESPN fantasy football article
   manifest.json         one entry per article: source, title, url, published,
                         path, and is_new (published within the last N hours)
 
-Network: www.cbssports.com, site.api.espn.com (article index) and
-content.core.api.espn.com (article text). www.espn.com refuses automated
+Network: www.cbssports.com, site.api.espn.com (article index),
+content.core.api.espn.com (article text), lm-api-reads.fantasy.espn.com (weekly
+ranks) and api.sleeper.app (current week). www.espn.com refuses automated
 requests, so ESPN text comes from its content API. The Athletic is not fetched.
 """
 import argparse
@@ -35,6 +38,9 @@ CBS_INDEXES = ["/fantasy/football/", "/fantasy/football/news/", "/fantasy/footba
 ESPN_FIXED = {"49803708": "Karabell flex and superflex rankings"}
 ESPN_NEWS = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=100"
 ESPN_CONTENT = "https://content.core.api.espn.com/v1/sports/news/{}"
+ESPN_PLAYERS = ("https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/{season}/segments/0/"
+                "leaguedefaults/3?scoringPeriodId={week}&view=kona_player_info")
+ESPN_POS = {1: "QB", 2: "RB", 3: "WR", 4: "TE"}
 
 
 def get(url, timeout=30):
@@ -77,8 +83,8 @@ def cbs_rankings(page):
         experts = re.findall(r"td--expert\">\s*([^<]+?)\s*<", tr)
         if not (rank and first and last):
             continue
-        rows.append(dict(rank=int(rank.group(1)), name=f"{first.group(1).strip()} {last.group(1).strip()}",
-                         team=team.group(1).strip() if team else None,
+        rows.append(dict(rank=int(rank.group(1)), name=html.unescape(f"{first.group(1).strip()} {last.group(1).strip()}"),
+                         team=html.unescape(team.group(1).strip()) if team else None,
                          pos=pos.group(1) if pos else None, pos_rank=int(pos.group(2)) if pos else None,
                          opp=opp.group(1).strip() if opp else None,
                          experts=[None if e.strip("-") == "" else int(e) for e in experts if re.fullmatch(r"\d+|-+", e)]))
@@ -132,6 +138,40 @@ def espn_articles(out, hours, now):
         items.append(save(out, "espn", web, a.get("headline") or ids[aid], a.get("published"),
                           a.get("lastModified"), text, hours, now))
     return items
+
+
+def espn_weekly_ranks(season, week):
+    """ESPN's weekly PPR rankings from its fantasy API: every analyst's positional rank for
+    the week (rankSourceId 0 is a placeholder with rank 0, skipped), averaged per player,
+    then re-ranked within the position. Same lists as ESPN's weekly rankings pages."""
+    filt = json.dumps({"players": {
+        "filterStatus": {"value": ["FREEAGENT", "WAIVERS", "ONTEAM"]},
+        "filterSlotIds": {"value": [0, 2, 4, 6]},
+        "filterRanksForScoringPeriodIds": {"value": [week]},
+        "filterRanksForRankTypes": {"value": ["PPR"]},
+        "sortDraftRanks": {"sortPriority": 100, "sortAsc": True, "value": "PPR"},
+        "limit": 600}})
+    r = subprocess.run(["curl", "-s", "-m", "90", "--compressed", "-A", UA, "-H", f"X-Fantasy-Filter: {filt}",
+                        "-w", "\n%{http_code}", ESPN_PLAYERS.format(season=season, week=week)], capture_output=True)
+    body, _, code = r.stdout.rpartition(b"\n")
+    if code != b"200":
+        return None, int(code or 0)
+    data = json.loads(body)
+    data = data.get("players", []) if isinstance(data, dict) else data
+    by_pos = {}
+    for p in data:
+        pl = p.get("player", {})
+        pos = ESPN_POS.get(pl.get("defaultPositionId"))
+        ranks = [x["rank"] for x in (pl.get("rankings") or {}).get(str(week), [])
+                 if x.get("rankType") == "PPR" and x.get("rank", 0) > 0]
+        if pos and ranks:
+            by_pos.setdefault(pos, []).append(dict(name=pl.get("fullName"), pos=pos, avg=round(sum(ranks) / len(ranks), 1),
+                                                   analysts=len(ranks), best=min(ranks), worst=max(ranks)))
+    rows = []
+    for pos, lst in by_pos.items():
+        for i, x in enumerate(sorted(lst, key=lambda x: x["avg"]), 1):
+            rows.append(dict(x, pos_rank=i))
+    return (dict(week=week, rows=rows) if rows else None), 200
 
 
 def espn_superflex(out):
@@ -192,6 +232,16 @@ def main():
     MANIFEST.extend(cbs_articles(a.out, a.hours, now))
     MANIFEST.extend(espn_articles(a.out, a.hours, now))
     json.dump(MANIFEST, open(os.path.join(a.out, "manifest.json"), "w"), indent=1)
+
+    try:
+        _, st = get("https://api.sleeper.app/v1/state/nfl")
+        st = json.loads(st)
+        ew, code = espn_weekly_ranks(st["season"], int(st["week"]))
+    except Exception as ex:   # never let one source stop the rest
+        ew, code = None, str(ex)
+    if ew:
+        json.dump(ew, open(os.path.join(a.out, "espn_rankings.json"), "w"), indent=0)
+    print("ESPN weekly ranks: " + (f"week {ew['week']} ({len(ew['rows'])} players)" if ew else f"not fetched ({code})"))
 
     sf = espn_superflex(a.out)
     if sf:

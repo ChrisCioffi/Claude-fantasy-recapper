@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """Render the daily sweep report (JSON) as the "Daily Lineup Desk" page.
 
-Usage: python3 render_sweep.py report.json > page.html
+Usage: python3 render_sweep.py report.json [--ranks ranks.json] > page.html
+
+--ranks takes the ranks.json that daily_sweep.py writes. With it, every lineup
+row, action and flag shows where CBS and ESPN rank the player (positional rank,
+overall rank under it). A row's own "cbs"/"espn" fields win over the file.
+Actions name their players in "players"; without it, player names found in the
+action's title and detail are used.
 
 report.json shape (every field except leagues[].name is optional):
 {
@@ -20,18 +26,28 @@ report.json shape (every field except leagues[].name is optional):
       "detail": "Drop Josh Downs · bid $3-5 · start at superflex",
       "why": "Daniels is your only QB, so a receiver is filling superflex.",
       "delta": "+7.8 H2H · +10.7 median",
+      "players": ["Geno Smith", "Josh Downs"],
       "sources": [{"label": "CBS weekly QB rankings", "url": "https://...", "quote": "optional exact quote"}]
     }],
     "flags": [{"tier": "MUST-START" | "BUST", "player": "Name", "where": "bench" | "waivers",
                "quote": "...", "label": "CBS · Eisenberg, Week 12 start/sit", "url": "https://..."}],
-    "lineup": [{"slot": "QB", "player": "Jayden Daniels", "proj": 22.2, "note": "", "changed": false}]
+    "lineup": [{"slot": "QB", "player": "Jayden Daniels", "proj": 22.2, "note": "", "changed": false,
+                "cbs": "QB4", "espn": "QB6"}]
   }],
   "sources": [{"label": "CBS weekly PPR rankings", "url": "https://...", "status": "Week 12, updated"}]
 }
 """
+import argparse
 import html
 import json
-import sys
+import re
+
+RANKS = {"available": {}, "players": {}}
+
+
+def norm(s):
+    s = re.sub(r"\b(jr|sr|ii|iii|iv)\b\.?", "", str(s).lower())
+    return re.sub(r"[^a-z0-9 ]", "", s).strip()
 
 KIND = {"claim": "Claim", "start": "Start", "bench": "Bench", "drop": "Drop", "watch": "Watch"}
 
@@ -104,6 +120,14 @@ td.slot { font-family: var(--mono); font-size: 0.7rem; font-weight: 700; white-s
 td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 tr.changed td { background: var(--win-bg); }
 .note { color: var(--ink-soft); font-size: 0.8rem; }
+th { padding: 6px 12px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 0.66rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); text-align: left; }
+th.num { text-align: right; }
+td.rk { text-align: right; font-family: var(--mono); font-size: 0.8rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.rk small { display: block; font-size: 0.66rem; color: var(--ink-soft); }
+td.rk .nr { color: var(--ink-soft); }
+.ranks { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 8px; font-family: var(--mono); font-size: 0.74rem; color: var(--ink-soft); }
+.ranks b { color: var(--ink); font-weight: 600; }
+.legend { font-family: var(--mono); font-size: 0.68rem; color: var(--ink-soft); margin: 6px 2px 0; line-height: 1.5; }
 .empty { font-size: 0.9rem; color: var(--ink-soft); margin: 0; }
 footer { font-family: var(--mono); font-size: 0.7rem; color: var(--ink-soft); line-height: 1.6; border-top: 1px solid var(--line); padding-top: 12px; }
 footer ul { margin: 6px 0 0; padding-left: 16px; }
@@ -129,6 +153,50 @@ def source_list(srcs):
     return f'<ul class="src">{"".join(items)}</ul>'
 
 
+def rank_of(name, row=None):
+    """(cbs, cbs_overall, espn, espn_overall) for a player; None = not ranked or list missing."""
+    p = RANKS["players"].get(norm(name), {})
+    row = row or {}
+    pos = p.get("pos") or row.get("slot")
+    return (row.get("cbs") or p.get("cbs"), p.get("cbs_overall"), row.get("espn") or p.get("espn"), p.get("espn_overall"), pos)
+
+
+def rank_text(src, r, pos=None):
+    if r:
+        return r
+    # Neither list ranks kickers or defenses
+    return "NR" if RANKS["available"].get(src) and pos in ("QB", "RB", "WR", "TE", None) else "–"
+
+
+def rank_cell(src, r, overall, pos=None):
+    if not r:
+        return f'<td class="rk"><span class="nr">{rank_text(src, r, pos)}</span></td>'
+    return f'<td class="rk">{e(r)}' + (f"<small>#{e(overall)}</small>" if overall else "") + "</td>"
+
+
+def rank_line(names):
+    if not RANKS["players"] or not names:
+        return ""
+    parts = []
+    for n in names:
+        c, co, s, so, pos = rank_of(n)
+        parts.append(f"<span><b>{e(n)}</b> CBS {e(rank_text('cbs', c, pos))}" + (f" (#{e(co)})" if co else "")
+                     + f" · ESPN {e(rank_text('espn', s, pos))}" + (f" (#{e(so)})" if so else "") + "</span>")
+    return f'<div class="ranks">{"".join(parts)}</div>'
+
+
+def players_in(a):
+    if a.get("players"):
+        return a["players"]
+    text = norm(" ".join(str(a.get(k, "")) for k in ("title", "detail")))
+    found = []
+    for key, p in RANKS["players"].items():
+        m = re.search(rf"\b{re.escape(key)}\b", text) if key else None
+        if m:
+            found.append((m.start(), p["name"]))
+    return [n for _, n in sorted(found)]
+
+
 def odds_tile(label, now, plan):
     if now is None and plan is None:
         return ""
@@ -148,28 +216,44 @@ def league(L):
         cards.append(
             f'<div class="card{" urgent" if a.get("urgent") else ""}"><div class="row"><span class="chip {e(k)}">{e(KIND.get(k, k))}</span>'
             f'<span class="title">{e(a.get("title", ""))}</span>' + (f'<span class="delta">{e(a["delta"])}</span>' if a.get("delta") else "") + "</div>"
-            + (f'<div class="detail">{e(a["detail"])}</div>' if a.get("detail") else "")
+            + (f'<div class="detail">{e(a["detail"])}</div>' if a.get("detail") else "") + rank_line(players_in(a))
             + (f'<p class="why">{e(a["why"])}</p>' if a.get("why") else "") + source_list(a.get("sources")) + "</div>")
     flags = []
     for f in L.get("flags", []):
         cls = "must" if f.get("tier") == "MUST-START" else "bust"
         flags.append(f'<div class="card"><div class="row"><span class="chip {cls}">{e(f.get("tier", ""))}</span>'
                      f'<span class="title">{e(f.get("player", ""))}</span><span class="detail">on your {e(f.get("where", ""))}</span></div>'
+                     + rank_line([f["player"]] if f.get("player") else [])
                      + source_list([dict(quote=f.get("quote"), url=f.get("url"), label=f.get("label"))]) + "</div>")
-    rows = "".join(f'<tr class="{"changed" if r.get("changed") else ""}"><td class="slot">{e(r.get("slot", ""))}</td>'
-                   f'<td>{e(r.get("player", ""))}' + (f'<div class="note">{e(r["note"])}</div>' if r.get("note") else "") + "</td>"
-                   f'<td class="num">{e(r.get("proj", ""))}</td></tr>' for r in L.get("lineup", []))
+    rows = []
+    for r in L.get("lineup", []):
+        c, co, s, so, pos = rank_of(r.get("player", ""), r)
+        rows.append(f'<tr class="{"changed" if r.get("changed") else ""}"><td class="slot">{e(r.get("slot", ""))}</td>'
+                    f'<td>{e(r.get("player", ""))}' + (f'<div class="note">{e(r["note"])}</div>' if r.get("note") else "") + "</td>"
+                    + rank_cell("cbs", c, co, pos) + rank_cell("espn", s, so, pos) + f'<td class="num">{e(r.get("proj", ""))}</td></tr>')
+    rows = "".join(rows)
+    head = '<thead><tr><th>Slot</th><th>Player</th><th class="num">CBS</th><th class="num">ESPN</th><th class="num">Proj</th></tr></thead>'
     return (f'<section class="league"><div class="lhead"><h2>{e(L["name"])}</h2>'
             f'<div class="facts">{"".join(f"<span>{x}</span>" for x in facts if x)}</div>'
             + (f'<div class="odds">{tiles}</div>' if tiles else "") + "</div>"
             + "<h3>Do this</h3>" + (f'<div class="cards">{"".join(cards)}</div>' if cards else '<p class="empty">No changes needed.</p>')
             + (f'<h3>Flags on your bench or the wire</h3><div class="cards">{"".join(flags)}</div>' if flags else "")
-            + (f'<h3>Lineup to set</h3><div class="table-wrap"><table><tbody>{rows}</tbody></table></div>' if rows else "")
+            + (f'<h3>Lineup to set</h3><div class="table-wrap"><table>{head}<tbody>{rows}</tbody></table></div>'
+               '<p class="legend">CBS: weekly PPR rank at the position, overall flex rank under it. ESPN: its analysts\' '
+               'consensus weekly PPR rank at the position, with Karabell\'s overall superflex rank under it when his '
+               'list is current. NR: not in that week\'s list. '
+               '–: that list isn\'t out for this week.</p>' if rows else "")
             + "</section>")
 
 
 def main():
-    R = json.load(open(sys.argv[1]))
+    ap = argparse.ArgumentParser()
+    ap.add_argument("report")
+    ap.add_argument("--ranks", help="ranks.json from daily_sweep.py")
+    a = ap.parse_args()
+    R = json.load(open(a.report))
+    if a.ranks:
+        RANKS.update(json.load(open(a.ranks)))
     notes = "".join(f"<li>{e(n)}</li>" for n in R.get("notes", []))
     srcs = "".join(f'<li><a href="{e(s["url"])}" target="_blank" rel="noopener">{e(s["label"])}</a>' + (f" · {e(s['status'])}" if s.get("status") else "") + "</li>"
                    if s.get("url") else f"<li>{e(s['label'])}" + (f" · {e(s['status'])}" if s.get("status") else "") + "</li>" for s in R.get("sources", []))

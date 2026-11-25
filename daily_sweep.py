@@ -90,12 +90,22 @@ def main():
             continue
         for r in part["rows"]:
             cbs_rank[(norm(r["name"]), r["pos"])] = r
-    espn_rank = {}
+    # ESPN: the analysts' weekly consensus (espn_rankings.json) when it is this week's,
+    # else Karabell's superflex list. Karabell's overall superflex rank is kept either way.
+    espn_rank, karabell = {}, {}
     if espn and espn.get("week") == a.week:
         for r in espn["rows"]:
+            karabell[(norm(r["name"]), r["pos"])] = r
+    ew_path = os.path.join(S, "espn_rankings.json")
+    ew = json.load(open(ew_path)) if os.path.exists(ew_path) else None
+    if ew and ew.get("week") == a.week:
+        for r in ew["rows"]:
             espn_rank[(norm(r["name"]), r["pos"])] = r
     else:
-        notes.append(f"ESPN superflex rankings are week {espn.get('week') if espn else None}, not week {a.week}: ignored until Karabell updates them")
+        notes.append(f"ESPN weekly ranks are week {ew.get('week') if ew else None}, not week {a.week}")
+        espn_rank = dict(karabell)
+    if not karabell:
+        notes.append(f"ESPN superflex rankings (Karabell) are week {espn.get('week') if espn else None}, not week {a.week}: ignored until he updates them")
     slp = sleeper_projections(a.week, a.season)
     if not slp:
         notes.append("Sleeper projections unavailable")
@@ -145,6 +155,9 @@ def main():
 
     # ---- players -------------------------------------------------------------
     proj_rows, report = {}, {"week": a.week, "notes": notes, "leagues": []}
+    # Every player's CBS and ESPN ranks, for render_sweep.py --ranks. "available" says whether
+    # each list is current this week, so the page can tell "not ranked" from "list missing".
+    rank_table = {"week": a.week, "available": {"cbs": bool(cbs_rank), "espn": bool(espn_rank)}, "players": {}}
 
     def value(r):
         pos, pid = r["position"], r["player_id"]
@@ -158,6 +171,11 @@ def main():
             pts.append(slp[pid]["proj"])
         proj = round(sum(pts) / len(pts), 1) if pts else 0.0
         proj_rows[pid] = dict(player_id=pid, player_name=r["player_name"], position=pos, proj=proj)
+        rank_table["players"][norm(r["player_name"])] = dict(
+            name=r["player_name"], pos=pos, proj=proj, sleeper=round(slp[pid]["proj"], 1) if pid in slp else None,
+            cbs=f"{pos}{c['pos_rank']}" if c else None, cbs_overall=c["rank"] if c and pos != "QB" else None,
+            espn=f"{pos}{e['pos_rank']}" if e else None,
+            espn_overall=karabell[(norm(r["player_name"]), pos)]["rank"] if (norm(r["player_name"]), pos) in karabell else None)
         return dict(name=r["player_name"], pos=pos, team=r.get("nfl_team"), injury=r.get("injury_status"),
                     slot=r.get("slot"), proj=proj, cbs=c["pos_rank"] if c else None, espn=e["pos_rank"] if e else None,
                     cbs_overall=c["rank"] if c else None, sleeper=round(slp[pid]["proj"], 1) if pid in slp else None,
@@ -206,6 +224,7 @@ def main():
         w.writeheader()
         w.writerows(proj_rows.values())
     json.dump(report, open(os.path.join(S, "sweep.json"), "w"), indent=1)
+    json.dump(rank_table, open(os.path.join(S, "ranks.json"), "w"), indent=0)
 
     # ---- print -----------------------------------------------------------------
     def fmt(p):
@@ -225,6 +244,7 @@ def main():
             for h in f["hits"]:
                 print(f"  FLAG {h['tier']} ({f['where']}): {f['player']['name']} — \"{h['quote'][:220]}\" [{h['source'].upper()}: {h['title'][:60]}{', NEW' if h['new'] else ''}]")
     print(f"\nProjections: {os.path.join(S, f'proj_week{a.week}.csv')}")
+    print(f"Ranks for the page: {os.path.join(S, 'ranks.json')}")
 
 
 if __name__ == "__main__":

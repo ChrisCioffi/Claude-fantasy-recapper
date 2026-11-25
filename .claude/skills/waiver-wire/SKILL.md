@@ -309,19 +309,24 @@ for a "sweep" or "daily check":
 2. `python3 fetch_sources.py --out ~/fantasy_sources`. This fetches CBS's
    weekly PPR rankings (flex and QB pages), every linked CBS fantasy
    football article, ESPN fantasy articles from ESPN's news index, and
-   Karabell's superflex list (ESPN article 49803708, reused weekly). ESPN
+   Karabell's superflex list (ESPN article 49803708, reused weekly), plus
+   ESPN's weekly PPR ranks from its fantasy API (lm-api-reads.fantasy.espn.com,
+   kona_player_info): each ESPN analyst's positional rank for the week,
+   averaged and re-ranked (`espn_rankings.json`). ESPN
    text comes from content.core.api.espn.com, because www.espn.com refuses
    automated requests. The Athletic isn't fetched (paywall). Articles stay
    outside the repo.
 3. `python3 daily_sweep.py --sources ~/fantasy_sources --week <N>
    <league_id>:<team> ...`. It writes `proj_week<N>.csv`: CBS and ESPN
-   positional ranks averaged and turned into points with the ln(rank) fit,
+   positional ranks (ESPN's analyst consensus; Karabell's list only if the
+   consensus is missing) averaged and turned into points with the ln(rank) fit,
    then averaged with Sleeper's projection. A ranking list from another
    week is ignored and noted. It prints lineup holes, bench players ranked
    above a starter at their position, free agents ranked above your
    weakest player, and **flags**: any benched or available player that a
    current-week article calls a must-start or lineup lock, or a bust,
-   with the quote.
+   with the quote. It also writes `ranks.json`: every rostered and available
+   player's CBS and ESPN rank, which the page shows.
 4. Price the leads with `sleeper_winprob.R` using `proj_week<N>.csv`, read
    the flagged and new articles for context, and recommend by rank: the
    highest-ranked available player wins unless injury news or a
@@ -334,8 +339,11 @@ for a "sweep" or "daily check":
 7. Publish the report page. Write `report.json` in the shape documented at
    the top of `render_sweep.py`. Every action carries the links (and a
    short exact quote where one exists) to the articles or ranking pages
-   that justify it. Then run `python3 render_sweep.py report.json >
-   daily-lineup-desk.html` and publish it to the same artifact every day,
+   that justify it, and names its players in `players`. Then run
+   `python3 render_sweep.py report.json --ranks ranks.json >
+   daily-lineup-desk.html`, so the lineup table and every action and flag
+   show where CBS and ESPN rank each player (the owner wants these ranks with
+   every lineup recommendation), and publish it to the same artifact every day,
    so the link never changes: https://claude.ai/artifact/VfkWRtEkCnQ2timfn49jaQ
    (Artifact tool: `read` it first, then publish with `url`). The push
    notification is one or two plain sentences plus that link.
