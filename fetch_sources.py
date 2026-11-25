@@ -32,7 +32,8 @@ CBS = "https://www.cbssports.com"
 # waiver, cheat-sheet and trade-chart columns
 CBS_INDEXES = ["/fantasy/football/", "/fantasy/football/news/", "/fantasy/football/rankings/"]
 # ESPN columns that reuse one article id all season (updated weekly)
-ESPN_FIXED = {"49803708": "Karabell flex and superflex rankings"}
+ESPN_FIXED = {"49803708": "Karabell flex and superflex rankings",
+              "50573832": "Karabell flex and superflex rankings"}
 ESPN_NEWS = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=100"
 ESPN_CONTENT = "https://content.core.api.espn.com/v1/sports/news/{}"
 
@@ -136,7 +137,17 @@ def espn_articles(out, hours, now):
 
 def espn_superflex(out):
     """Parse Karabell's superflex list ("12. Name, QB5 vs OPP") from its article text."""
-    p = slug_path(out, "espn", next((u for u in [m["url"] for m in MANIFEST if "49803708" in m["url"]]), "x"))
+    # ESPN sometimes republishes the list under a new article id, so take the
+    # highest-week superflex article in the manifest, not just the fixed id.
+    best = None
+    for m in MANIFEST:
+        if m.get("source") != "espn" or "superflex-rankings" not in m["url"]:
+            continue
+        wk = re.search(r"Week (\d+)", m.get("title") or "")
+        wk = int(wk.group(1)) if wk else -1
+        if best is None or wk > best[0]:
+            best = (wk, m["url"])
+    p = slug_path(out, "espn", best[1] if best else "x")
     if not os.path.exists(p):
         return None
     t = open(p).read()
